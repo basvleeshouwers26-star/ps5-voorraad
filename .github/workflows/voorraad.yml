@@ -1,0 +1,54 @@
+name: PS5 voorraadcheck
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # elke 5 minuten (GitHub kan dit bij drukte vertragen)
+  workflow_dispatch:
+    inputs:
+      report:
+        description: "Stuur nu een statusmelding naar je telefoon"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voorraadcheck
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vorige status ophalen
+        uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: voorraad-state-${{ github.run_id }}
+          restore-keys: voorraad-state-
+
+      - name: Voorraad controleren
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          FORCE_REPORT: ${{ github.event_name == 'workflow_dispatch' && inputs.report }}
+        run: python3 check_stock.py
+
+      - name: Status bewaren
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: voorraad-state-${{ github.run_id }}
+
+      - name: Pagina's bewaren voor controle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-html-${{ github.run_id }}
+          path: debug/
+          retention-days: 2
+          if-no-files-found: ignore
