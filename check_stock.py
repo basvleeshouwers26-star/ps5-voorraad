@@ -144,26 +144,25 @@ def classify(product):
         snippet = html[max(0, m.start() - 150): m.end() + 50].replace("\n", " ")
         log(f"  context: ...{snippet}...")
         info.setdefault("snippet", snippet[-200:])
-    # Staat er een actieve 'Toevoegen aan wagentje'-knop voor dit product in de pagina? (alleen gelogd)
+    # Hoofdsignaal: staat er een 'Toevoegen aan wagentje'-knop (ctaSubType add_to_cart) voor dit product?
+    # Getest op 28-10-2026: Sony's stockLevelStatus zei OUT_OF_STOCK terwijl de console via die knop
+    # gewoon te koop was, en een pagina zonder die knop toonde "Niet beschikbaar voor aankoop".
     base = (code or "").split("-E0")[0]
-    info["cart_button"] = any(
-        base and base in html[max(0, m.start() - 4000): m.start()]
-        for m in re.finditer(r"ctaWithPrice:addToCart", html)
+    info["cart_button"] = bool(base) and any(
+        base in html[m.start(): m.start() + 800] for m in re.finditer(r"add_to_cart", html)
     )
+    info["stock_field"] = mine
     lower = html.lower()
     info["hints"] = {
         k: (k in lower)
-        for k in ("stocklevel", "uitverkocht", "toevoegen aan", "in winkelwagen",
-                  "niet beschikbaar voor aankoop", "access denied", "__next_data__", "self.__next_f")
+        for k in ("stocklevel", "uitverkocht", "toevoegen aan", "add_to_cart",
+                  "niet beschikbaar voor aankoop", "access denied", "self.__next_f")
     }
+    log(f"  koopknop voor dit product: {info['cart_button']}")
 
-    if not mine:
-        return "UNKNOWN", info, html
-    if any(s.upper() not in OUT_VALUES for s in mine):
-        info["raw"] = mine
-        return "IN_STOCK", info, html
-    info["raw"] = mine
-    return "OUT_OF_STOCK", info, html
+    if not base or base not in html:
+        return "UNKNOWN", info, html  # verkeerde of gewijzigde pagina
+    return ("IN_STOCK" if info["cart_button"] else "OUT_OF_STOCK"), info, html
 
 
 def notify(topic, title, message, priority=3, click=None, tags=None):
