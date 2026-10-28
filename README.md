@@ -1,6 +1,6 @@
 # PS5 voorraadcheck
 
-Controleert elke 5 minuten of de refurbished PS5 (origineel model met disc) en de refurbished PS5 Digital Edition (slim) op playstation.com/nl-nl weer te koop zijn, en stuurt dan een pushmelding via de ntfy-app.
+Controleert elke 5 minuten of de refurbished PS5 slim met disc en de refurbished PS5 Digital Edition (slim) op playstation.com/nl-nl weer te koop zijn, en stuurt dan een pushmelding via de ntfy-app.
 
 ## Hoe het werkt
 

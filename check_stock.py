@@ -20,19 +20,20 @@ import urllib.request
 from datetime import datetime, timezone
 
 PRODUCTS = [
+    # Het oude refurbished model (CFI-1000) is niet meer te koop: PS Direct stuurt door naar de slim.
     {
-        "key": "disc",
-        "name": "Refurbished PS5 (origineel model, met disc)",
-        "url": "https://www.playstation.com/nl-nl/ps5/certified-refurbished/product/PSD001-PSDE01840_63-PS5GRADEDCEC7XZE/",
-        "code": "PSD001-PSDE01840_63-PS5GRADEDCEC7XZE",
-        "buy": "https://direct.playstation.com/nl-nl/buy-consoles/certified-refurbished-playstation5-console",
+        "key": "disc_slim",
+        "name": "Refurbished PS5 slim met disc",
+        "url": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim/",
+        "code": "PSD001-PSDE00233_59-PS5GRADEDCLIZSLE",
+        "buy": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim/",
     },
     {
         "key": "digital",
         "name": "Refurbished PS5 Digital Edition (slim)",
         "url": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim-digital-edition/",
-        "code": None,  # wordt uit de pagina zelf gehaald
-        "buy": "https://direct.playstation.com/nl-nl/buy-consoles/certified-refurbished-playstation5-digital-edition-console-model-group-slim",
+        "code": "PSD001-PSDE00234_23-PS5GRADEDDMBTOTE",
+        "buy": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim-digital-edition/",
     },
 ]
 
@@ -143,6 +144,12 @@ def classify(product):
         snippet = html[max(0, m.start() - 150): m.end() + 50].replace("\n", " ")
         log(f"  context: ...{snippet}...")
         info.setdefault("snippet", snippet[-200:])
+    # Staat er een actieve 'Toevoegen aan wagentje'-knop voor dit product in de pagina? (alleen gelogd)
+    base = (code or "").split("-E0")[0]
+    info["cart_button"] = any(
+        base and base in html[max(0, m.start() - 4000): m.start()]
+        for m in re.finditer(r"ctaWithPrice:addToCart", html)
+    )
     lower = html.lower()
     info["hints"] = {
         k: (k in lower)
