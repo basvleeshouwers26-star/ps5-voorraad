@@ -142,6 +142,13 @@ def classify(product):
     for m in list(STATUS_RE.finditer(html))[:3]:
         snippet = html[max(0, m.start() - 150): m.end() + 50].replace("\n", " ")
         log(f"  context: ...{snippet}...")
+        info.setdefault("snippet", snippet[-200:])
+    lower = html.lower()
+    info["hints"] = {
+        k: (k in lower)
+        for k in ("stocklevel", "uitverkocht", "toevoegen aan", "in winkelwagen",
+                  "niet beschikbaar voor aankoop", "access denied", "__next_data__", "self.__next_f")
+    }
 
     if not mine:
         return "UNKNOWN", info, html
@@ -173,6 +180,20 @@ def notify(topic, title, message, priority=3, click=None, tags=None):
             log(f"  melding verstuurd ({resp.status}): {title}")
     except Exception as e:
         log(f"  melding mislukt: {e!r}")
+
+
+def annotate(title, message):
+    """Zet diagnose als annotatie bij de run (alleen op GitHub Actions)."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+
+    def esc(s, prop=False):
+        s = s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        if prop:
+            s = s.replace(":", "%3A").replace(",", "%2C")
+        return s
+
+    print(f"::notice title={esc(title, True)}::{esc(message)}", flush=True)
 
 
 def load_state():
@@ -222,6 +243,7 @@ def main():
 
         if status in ("UNKNOWN", "ERROR") or force_report:
             save_debug(product["key"], html)
+            annotate(f"{product['key']}: {status}", json.dumps(info, ensure_ascii=False)[:3000])
 
         available = status in ("IN_STOCK", "QUEUE")
         was_available = prev_status in ("IN_STOCK", "QUEUE")
